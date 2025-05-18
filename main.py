@@ -102,20 +102,22 @@ def logic_agent(state: State):
 graph_builder = StateGraph(State)
 
 
-def chatbot(
-    state: State):
-    """Chatbot function to handle user input and generate a response."""
-
-    return { 'messages': [llm.invoke(state['messages']) ]}
-
-graph_builder.add_node('chatbot', chatbot)
-graph_builder.add_edge(START, end_key='chatbot')
-graph_builder.add_edge(start_key='chatbot',end_key=END)
-graph = graph_builder.compile()
+graph_builder.add_node('classifier', classify_message)
+graph_builder.add_node('router', router)
+graph_builder.add_node('logical', logic_agent)
+graph_builder.add_node('therapist', therapist_agent)
 
 
-user_input = input("You: ") 
-state = graph.invoke({'messages': [{'role': 'user', 'content': user_input}]} ) 
+graph_builder.add_edge(START, 'classifier')
+graph_builder.add_edge('classifier', 'router')
+graph_builder.add_conditional_edges('router', {
+    'logical': 'logical',
+    'therapist': 'therapist'
+})
+graph_builder.add_edge('logical', END)
+graph_builder.add_edge('therapist', END)
+
+graph = graph_builder.compile() 
 
 
 print("Assistant:", state['messages'][-1].content)
