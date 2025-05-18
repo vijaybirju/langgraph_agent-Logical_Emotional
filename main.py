@@ -14,10 +14,48 @@ load_dotenv()
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 
 
+class MessageClassifier(BaseModel):
+    message_type: Literal['emotional', 'logical'] = Field(
+        ...,
+        description="Classify if the message requires an emotional (therapist) or logical response."
+     )
 
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
+    message_type: str | None
+
+
+def classify_message(state: State):
+    last_message = state['messages'][-1]
+    classifier_llm = llm.with_structured_output(MessageClassifier)
+
+    result = classifier_llm.invoke([
+        {
+            "role": "system",
+            "content": """Classify the user message as either:
+            - 'emotional': if it asks for emotional support, therapy, deals with feelings, or personal problems
+            - 'logical': if it asks for facts, information, logical analysis, or practical solutions
+            """
+        },
+        {
+            "role": "user",
+            "content": last_message.content
+        }
+    ])
+    return {"message_type":result.message_type}
+
+
+def router(state: State) -> State:
+    pass
+
+
+def therapist_agent(state: State):
+    pass
+
+
+def logic_agent(state: State):
+    pass
 
 
 graph_builder = StateGraph(State)
@@ -27,10 +65,7 @@ def chatbot(
     state: State):
     """Chatbot function to handle user input and generate a response."""
 
-    if 'messages' in state:
-        return { 'messages': [llm.invoke(state['messages']) ]}
-    else:
-        print("The 'messages' key is not present in the state.")
+    return { 'messages': [llm.invoke(state['messages']) ]}
 
 graph_builder.add_node('chatbot', chatbot)
 graph_builder.add_edge(START, end_key='chatbot')
