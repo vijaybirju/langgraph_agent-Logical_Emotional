@@ -110,7 +110,8 @@ graph_builder.add_node('therapist', therapist_agent)
 
 graph_builder.add_edge(START, 'classifier')
 graph_builder.add_edge('classifier', 'router')
-graph_builder.add_conditional_edges('router', {
+graph_builder.add_conditional_edges('router', 
+    lambda state: state.get("next"), {
     'logical': 'logical',
     'therapist': 'therapist'
 })
@@ -120,3 +121,29 @@ graph_builder.add_edge('therapist', END)
 graph = graph_builder.compile() 
 
 
+def run_chatbot():
+    state = {
+        'messages': [],
+        'message_type': None
+    }
+
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() in ['exit', 'quit']:
+            print("Exiting bye, see you later!")
+            break
+
+        state['messages'] = state.get('messages', []) + [{
+            'role': 'user',
+            'content': user_input
+        }]
+
+        state = graph.invoke(state)
+
+        if state.get('messages') and len(state['messages']) > 0:
+            assistant_message = state['messages'][-1]
+            print(f"Assistant: {assistant_message.content}")
+
+    
+if __name__ == "__main__":
+    run_chatbot()
