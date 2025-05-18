@@ -120,5 +120,3 @@ graph_builder.add_edge('therapist', END)
 graph = graph_builder.compile() 
 
 
-print("Assistant:", state['messages'][-1].content)
-print("Assistant:", state['messages'])
