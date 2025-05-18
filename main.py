@@ -47,8 +47,11 @@ def classify_message(state: State):
 
 
 def router(state: State) -> State:
-    pass
-
+    message_type = state.get('message_type', 'logical')
+    if message_type == 'emotional':
+        return {'next':'therapist'}
+    else:
+        return {'next':'logical'}
 
 def therapist_agent(state: State):
     pass
