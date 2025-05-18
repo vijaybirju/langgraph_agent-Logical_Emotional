@@ -16,3 +16,6 @@ A conversational AI system built with **LangGraph**, **LangChain**, and **Gemini
 
 ## 🗂 Project Structure (UV Compatible)
 
+<img width="686" alt="image" src="https://github.com/user-attachments/assets/f8706467-bcce-4798-8e91-29a16c5fe4e0" />
+
+
