@@ -3,6 +3,10 @@ from typing import Annotated, Literal
 from langgraph.graph import START, END, StateGraph
 from langgraph.graph.message import add_messages
 from langchain.chat_models import init_chat_model
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from groq import Groq
@@ -13,7 +17,6 @@ load_dotenv()
 
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 
-
 class MessageClassifier(BaseModel):
     message_type: Literal['emotional', 'logical'] = Field(
         ...,
@@ -22,7 +25,7 @@ class MessageClassifier(BaseModel):
 
 
 class State(TypedDict):
-    messages: Annotated[list, add_messages]
+    messages: Annotated[list[BaseMessage], add_messages]
     message_type: str | None
 
 
@@ -62,18 +65,17 @@ def therapist_agent(state: State):
                         Show empathy, validate their feelings, and help them process their emotions.
                         Ask thoughtful questions to help them explore their feelings more deeply.
                         Avoid giving logical solutions unless explicitly asked."""
-    },{
-        "role": "user",
-        "content": last_message.content
     }]
 
+    # Add entire conversation history
+    for msg in state['messages']:
+        if isinstance(msg, HumanMessage):
+            messages.append({"role": "user", "content": msg.content})
+        elif isinstance(msg, AIMessage):
+            messages.append({"role": "assistant", "content": msg.content})
+    
     reply = llm.invoke(messages)
-    return {
-        'messages': [{
-            "role": "assistant",
-            "content":reply.content
-        }]
-    }
+    return {'messages': [AIMessage(content=reply.content)]}
 
 
 def logic_agent(state: State):
@@ -85,18 +87,16 @@ def logic_agent(state: State):
             Provide clear, concise answers based on logic and evidence.
             Do not address emotions or provide emotional support.
             Be direct and straightforward in your responses."""
-    },{
-        "role": "user",
-        "content": last_message.content
     }]
 
+    for msg in state['messages']:
+        if isinstance(msg, HumanMessage):
+            messages.append({"role": "user", "content": msg.content})
+        elif isinstance(msg, AIMessage):
+            messages.append({"role": "assistant", "content": msg.content})
+    
     reply = llm.invoke(messages)
-    return {
-        'messages': [{
-            "role": "assistant",
-            "content":reply.content
-        }]
-    }
+    return {'messages': [AIMessage(content=reply.content)]}
 
 
 graph_builder = StateGraph(State)
@@ -117,32 +117,53 @@ graph_builder.add_conditional_edges('router',
 })
 graph_builder.add_edge('logical', END)
 graph_builder.add_edge('therapist', END)
+checkpointer = InMemorySaver()
+graph = graph_builder.compile(checkpointer=checkpointer)
 
-graph = graph_builder.compile() 
-
-
-def run_chatbot():
-    state = {
+config = {
+    "configurable": {
+        "thread_id": "1"
+    }
+}
+state = {
         'messages': [],
         'message_type': None
     }
 
+def run_chatbot():
+#     while True:
+#         user_input = input("You: ")
+#         if user_input.lower() in ['exit', 'quit']:
+#             print("Exiting bye, see you later!")
+#             break
+
+#         state['messages'].append(HumanMessage(content=user_input))
+
+#         if state.get('messages') and len(state['messages']) > 0:
+#             ai_message = graph.invoke(
+#                 state,
+#                 config=config,
+#                 stream_mode="values",
+#                 checkpoint_during=True
+#             )
+#             print(f"Assistant: {ai_message['messages'][-1].content}")
+
     while True:
         user_input = input("You: ")
-        if user_input.lower() in ['exit', 'quit']:
-            print("Exiting bye, see you later!")
+        if user_input.lower() in ['exit', 'quit']: 
             break
-
-        state['messages'] = state.get('messages', []) + [{
-            'role': 'user',
-            'content': user_input
-        }]
-
-        state = graph.invoke(state)
-
-        if state.get('messages') and len(state['messages']) > 0:
-            assistant_message = state['messages'][-1]
-            print(f"Assistant: {assistant_message.content}")
+        
+        # 1. Pass ONLY new messages to graph
+        result = graph.invoke(
+            {"messages": [HumanMessage(content=user_input)]},
+            config=config,
+            stream_mode="values"
+        )
+        
+        # 2. Get assistant's response from result
+        assistant_msg = result['messages'][-1].content
+        print(f"Assistant: {assistant_msg}")
+    
 
     
 if __name__ == "__main__":
