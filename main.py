@@ -149,22 +149,6 @@ def run_chatbot():
             )
             print(f"Assistant: {ai_message['messages'][-1].content}")
 
-    # while True:
-    #     user_input = input("You: ")
-    #     if user_input.lower() in ['exit', 'quit']: 
-    #         break
-        
-    #     # 1. Pass ONLY new messages to graph
-    #     result = graph.invoke(
-    #         {"messages": [HumanMessage(content=user_input)]},
-    #         config=config,
-    #         stream_mode="values"
-    #     )
-        
-    #     # 2. Get assistant's response from result
-    #     assistant_msg = result['messages'][-1].content
-    #     print(f"Assistant: {assistant_msg}")
-    
 
     
 if __name__ == "__main__":
