@@ -125,44 +125,45 @@ config = {
         "thread_id": "1"
     }
 }
-state = {
+
+
+def run_chatbot():
+    state = {
         'messages': [],
         'message_type': None
     }
-
-def run_chatbot():
-#     while True:
-#         user_input = input("You: ")
-#         if user_input.lower() in ['exit', 'quit']:
-#             print("Exiting bye, see you later!")
-#             break
-
-#         state['messages'].append(HumanMessage(content=user_input))
-
-#         if state.get('messages') and len(state['messages']) > 0:
-#             ai_message = graph.invoke(
-#                 state,
-#                 config=config,
-#                 stream_mode="values",
-#                 checkpoint_during=True
-#             )
-#             print(f"Assistant: {ai_message['messages'][-1].content}")
-
     while True:
         user_input = input("You: ")
-        if user_input.lower() in ['exit', 'quit']: 
+        if user_input.lower() in ['exit', 'quit']:
+            print("Exiting bye, see you later!")
             break
+
+        state['messages'].append(HumanMessage(content=user_input))
+
+        if state.get('messages') and len(state['messages']) > 0:
+            ai_message = graph.invoke(
+                state,
+                config=config,
+                stream_mode="values",
+                checkpoint_during=True
+            )
+            print(f"Assistant: {ai_message['messages'][-1].content}")
+
+    # while True:
+    #     user_input = input("You: ")
+    #     if user_input.lower() in ['exit', 'quit']: 
+    #         break
         
-        # 1. Pass ONLY new messages to graph
-        result = graph.invoke(
-            {"messages": [HumanMessage(content=user_input)]},
-            config=config,
-            stream_mode="values"
-        )
+    #     # 1. Pass ONLY new messages to graph
+    #     result = graph.invoke(
+    #         {"messages": [HumanMessage(content=user_input)]},
+    #         config=config,
+    #         stream_mode="values"
+    #     )
         
-        # 2. Get assistant's response from result
-        assistant_msg = result['messages'][-1].content
-        print(f"Assistant: {assistant_msg}")
+    #     # 2. Get assistant's response from result
+    #     assistant_msg = result['messages'][-1].content
+    #     print(f"Assistant: {assistant_msg}")
     
 
     
